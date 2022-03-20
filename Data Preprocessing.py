@@ -15,6 +15,7 @@ nltk.download('averaged_perceptron_tagger')
 nltk.download('brown')
 nltk.download('wordnet')
 
+
 # 1. Read metadata (can be downloaded
 # from https://www.kaggle.com/datasets/allen-institute-for-ai/CORD-19-research-challenge?select=metadata.csv).
 path = 'path_to_repository/'
