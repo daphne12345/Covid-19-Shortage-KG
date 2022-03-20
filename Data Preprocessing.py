@@ -8,17 +8,19 @@ import nltk
 from nltk.tokenize import sent_tokenize
 import numpy as np
 from langdetect import detect
-
+import os
+os.system('python -m spacy download en_core_web_sm') # restart after running this line
 nltk.download('stopwords')
 nltk.download('punkt')
 nltk.download('averaged_perceptron_tagger')
 nltk.download('brown')
 nltk.download('wordnet')
 
+
 # 1. Read metadata (can be downloaded
 # from https://www.kaggle.com/datasets/allen-institute-for-ai/CORD-19-research-challenge?select=metadata.csv).
-path = 'path_to_repository/'
-df = pd.read_csv(path + '/data/metadata.csv')
+path = ''
+df = pd.read_csv(path + 'data/metadata.csv')
 df = df[['cord_uid', 'title', 'abstract', 'publish_time']].drop_duplicates()
 
 # 2. convert date to month & year
@@ -32,7 +34,7 @@ df = df[(df['real_month'] >= '2019-11') & (
             df['real_month'] <= '2021-10')]  # drop articles before covid & which are not published yet
 
 df = df[df['abstract'].notna()]  # drop articles without an abstract
-df = df[df['abstract'].apply(len) > 50]  # drop articles with a very short abstract
+df = df[df['abstract'].apply(lambda text: len(text.split(' '))) > 50]  # drop articles with a very short abstract
 
 df['abstract_low'] = df['abstract'].apply(
     lambda text: re.sub(r'[^\w]', '', str(text).lower()))  # lowercase and remove special characters
@@ -47,7 +49,7 @@ df['abstract_processed'] = df['abstract'].apply(lambda text: re.sub(r'[^\w.!? ]'
 nlp = spacy.load("en_core_web_sm")
 spacy.prefer_gpu()
 articles = ['the', 'a', 'an', 'this']
-covid_paper_terms = pckl.load(open('data/covid_paper_terms.pckl', 'rb'))
+covid_paper_terms = pckl.load(open(path + 'data/covid_paper_terms.pckl', 'rb'))
 
 
 def extract_noun_phrases(text):
