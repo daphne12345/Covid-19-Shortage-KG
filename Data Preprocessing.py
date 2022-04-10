@@ -74,6 +74,6 @@ def extract_noun_phrases(text):
 
 df[['np_sent', 'noun_phrases']] = df['abstract_processed'].apply(extract_noun_phrases)
 
-# 7. delete irrelevant columns and save preprocessed data
+# 6. delete irrelevant columns and save preprocessed data
 df = df[['cord_uid', 'has_month', 'abstract_processed', 'real_month', 'noun_phrases', 'np_sent']]
 df.to_pickle(path + 'data/df_preprocessed.pckl')
