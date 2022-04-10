@@ -1,0 +1,211 @@
+﻿name;type
+abbott;company
+commodity;product_syn
+resource;product_syn
+goods;product_syn
+product;product_syn
+purchase;procure_syn
+inadequate;shortage_syn
+scarcity;shortage_syn
+gloves;ppe
+shield;ppe
+ lack;shortage_syn
+kf94;mask
+3m;company
+glasses;ppe
+produce;procure_syn
+producer;procure_syn
+seller;procure_syn
+logistics;procure_syn
+sourcing;procure_syn
+cdc;company
+naat;test
+grifols;company
+scarce;shortage_syn
+distribute;procure_syn
+ ppe ;ppe
+becton dickinson;company
+face mask;mask
+procurement;procure_syn
+fisher paykel;company
+diasorin;company
+biontech;company
+bottleneck;shortage_syn
+capacity;stock_syn
+ stock;stock_syn
+unavailable;shortage_syn
+deficit;shortage_syn
+mask;mask
+deficiency;shortage_syn
+respirator ;ppe
+ bd ;company
+ffp2;mask
+kn95;mask
+n95;mask
+shortfall;shortage_syn
+unavailability;shortage_syn
+shortage;shortage_syn
+supply chain;procure_syn
+evita;company
+gowns;ppe
+supply;procure_syn
+manufacturer;procure_syn
+manufacture;procure_syn
+manufacturing;procure_syn
+supplier;procure_syn
+price;procure_syn
+personal protective equipment;ppe
+protective equipment;ppe
+hamilton;company
+nucleic acid amplification;test
+inventory;stock_syn
+blood test;test
+demand;require_syn
+phillips;company
+honeywell;company
+insufficiency;shortage_syn
+aprons;ppe
+roche;company
+market;procure_syn
+buy;procure_syn
+rt pcr;test
+luminex;company
+avellino;company
+peak;increase_syn
+request ;require_syn
+draeger;company
+stockpile;stock_syn
+respironics;ppe
+bgi;company
+ventilator;ventilation
+antigen;test
+pcr ;test
+polymerase chain reaction;test
+diagnostic test;test
+reagent;test
+swab;test
+sanitizing product;sanitize_syn
+hand sanitiser;sanitize_syn
+hand sanitizer;sanitize_syn
+protective gear;ppe
+surgical mask;mask
+goggle;ppe
+ visor ;ppe
+protective clothing;ppe
+protective gear;ppe
+ffp3;mask
+medical mask;mask
+medical face shield;ppe
+face shield;ppe
+faceshield;ppe
+mechanical ventilation;ventilation
+ventilation;ventilation
+ecmo;ventilation
+extracorporeal membrane oxygenation;ventilation
+oxygenation;ventilation
+cpap;ventilation
+continuous positive airway pressure;ventilation
+propane;raw_material
+ lumber;raw_material
+raw material;raw_material
+steel;raw_material
+inhaler;ventilation
+toilet paper;paper
+freezer;consumer_good
+household appliance;consumer_good
+sewing machine;consumer_good
+jigsaw;consumer_good
+blood donation;blood
+blood donor;blood
+donated blood;blood
+chlorine;chlorine
+paper towel;paper
+tissue paper;paper
+diaper;paper
+production shift;shortage_syn
+disinfect;sanitize_syn
+bleach;sanitize_syn
+vaccine;vaccine
+vaccination;vaccine
+johnson;company
+pfizer;company
+moderna;company
+astrazeneca;company
+vaccinate;vaccine
+container;container
+oxygen;ventilation
+gasoline;gas
+nitrile;ppe
+reduction;shortage_syn
+hoarding;shortage_syn
+stockpiling;stock_syn
+short supply;shortage_syn
+ chip ;chip_shortage
+conductor;chip_shortage
+semiconductor;chip_shortage
+microchip;chip_shortage
+intel ;chip_shortage
+cotton mask;mask
+oropharyngeal nasopharyngeal swab;swab
+polyester nasal swab;swab
+ventilator circuit;ventilation
+quantitative reverse transcriptase polymerase chain reaction;test
+rtqpcr;test
+pcv13;vaccine
+bnt162b2;vaccine
+heating ventilation system;ventilation
+hvac;ventilation
+taqman;test
+thermofisher inc;test
+stainless steel;raw_material
+conjunctival swab;swab
+immunoreagent;test
+smart mask;mask
+tozinameran;vaccine
+filter mask;mask
+water disinfection system;chlorine
+chadox1s;vaccine
+alinity m;test
+facepiece mask;mask
+adenovirus serotype vaccine;vaccine
+cloth mask;mask
+ad26cov2s;vaccine
+plastic container;raw_material
+ hocl ;chlorine
+hypochlorous acid;chlorine
+ abhs ;sanitize_syn
+npop;swab
+protective mask;mask
+cleanser;sanitize_syn
+disinfectant nanospray;sanitize_syn
+rapid antigenic test;test
+ clo2 ;chlorine
+chlorine dioxide;chlorine
+disinfectant sprayer;sanitize_syn
+covishield;vaccine
+molecular diagnostic test;test
+rhinooropharyngeal swab;swab
+throat swab;swab
+beckman coulter;test
+polyester swab;swab
+valve mask;mask
+acetonitrile;ppe
+pharyngeal swab;swab
+frsm;mask
+fluid resistant surgical mask;mask
+fluid repellent surgical mask;mask
+scarceness;shortage_syn
+ sfm ;mask
+surgical face mask;mask
+copper;raw_material
+coal;raw_material
+petroleum;gas
+plastic;raw_material
+drug;medicine
+ tea ;food
+sugar;food
+ rice ;food
+caffeine;food
+dairy;food
+natural products;raw_material
+coffee;food
