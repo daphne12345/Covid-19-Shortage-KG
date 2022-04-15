@@ -32,7 +32,7 @@ wordnet_lemmatizer = WordNetLemmatizer()
 path = ''
 if not os.path.exists(path):
     os.makedirs(path)
-    os.makedirs(path + '/kgs')
+os.makedirs(path + '/kgs')
 os.environ["CORENLP_HOME"] = path + '/corenlp'
 
 df_tm = pd.read_pickle(path + '/data/df_tm.pckl')
@@ -119,20 +119,7 @@ def __get_dbpedia_triples_2016(url):
     return triples
 
 
-def __add_synonyms(word):
-    """
-    Returns all synonyms to an entity in Wordnet.
-    :param word: word to find synonyms for
-    :return: Dataframe in the form of KG triples with the relation "same_as" connecting the input word and its synonyms
-    """
-    word = word.replace('_', ' ')
-    synonyms = list(set([s for syns in wn.synsets(word, pos=wn.NOUN) for s in syns.lemma_names() if s != word]))
-    if len(synonyms) > 0:
-        return pd.DataFrame.from_dict({'s': [word] * len(synonyms), 'p': ['same_as'] * len(synonyms), 'o': synonyms})
-    return pd.DataFrame()
-
-
-def create_initial_kg():
+def entity_linking():
     """
     Creates the initial KG from the list of shortage indicators by linking it to DBPedia from 2016 and extracting the triples.
     :return: initial KG
@@ -146,11 +133,35 @@ def create_initial_kg():
     links = pd.Series(df_no_cov['link_direct'].dropna().explode().dropna().unique())
     KG = pd.concat(links.apply(__get_dbpedia_triples_2016).to_list())
 
-    KG = KG.append(pd.concat(df_no_cov['name'].apply(__add_synonyms).to_list())).drop_duplicates()
     KG = clean_kg(KG)
     KG.to_pickle(path + 'kgs/initial_kg.pckl')
     return KG
 
+
+def __find_synonyms(word):
+    """
+    Returns all synonyms to an entity in Wordnet.
+    :param word: word to find synonyms for
+    :return: Dataframe in the form of KG triples with the relation "same_as" connecting the input word and its synonyms
+    """
+    word = word.replace('_', ' ')
+    synonyms = list(set([s for syns in wn.synsets(word, pos=wn.NOUN) for s in syns.lemma_names() if s != word]))
+    if len(synonyms) > 0:
+        return pd.DataFrame.from_dict({'s': [word] * len(synonyms), 'p': ['same_as'] * len(synonyms), 'o': synonyms})
+    return pd.DataFrame()
+
+
+def add_synonyms(KG):
+    """
+    Add sysnonyms to the KG.
+    :param KG: knowledge graph
+    :return: KG with synonyms
+    """
+    KG = KG.append(pd.concat(KG['s'].apply(__find_synonyms).to_list())).drop_duplicates()
+    KG = KG.append(pd.concat(KG['o'].apply(__find_synonyms).to_list())).drop_duplicates()
+    KG = clean_kg(KG)
+    KG.to_pickle(path + 'kgs/initial_kg.pckl')
+    return KG
 
 ###################################################################
 ##Entity Typing
@@ -480,3 +491,29 @@ def remove_duplicates_dedupe(KG):
     KG = clean_kg(KG.dropna())
     KG.to_pickle(path + 'kgs/kg_duplicates_dedupe.pckl')
     return KG
+
+
+def create_kg():
+    evaluation = list()
+    KG = entity_linking()
+    evaluation.append([evaluate_kg(KG)])
+
+    KG = add_synonyms(KG)
+    evaluation.append([evaluate_kg(KG)])
+
+    entity_types = create_entity_type_dict()
+    KG = add_entity_types(KG, entity_types)
+    evaluation.append([evaluate_kg(KG)])
+
+    KG = relation_extraction(KG)
+    evaluation.append([evaluate_kg(KG)])
+
+    KG = relation_extraction(KG)
+    evaluation.append([evaluate_kg(KG)])
+
+    KG = create_superclasses(KG)
+    evaluation.append([evaluate_kg(KG)])
+
+    KG = add_entity_types(KG, entity_types)
+    evaluation.append([evaluate_kg(KG)])
+    return KG, evaluation
