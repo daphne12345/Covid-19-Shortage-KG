@@ -516,4 +516,6 @@ def create_kg():
 
     KG = add_entity_types(KG, entity_types)
     evaluation.append([evaluate_kg(KG)])
+
+    KG.to_pickle(path + 'kgs/KG_final.pckl')
     return KG, evaluation
