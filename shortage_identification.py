@@ -9,15 +9,17 @@ from nltk.stem import WordNetLemmatizer
 import os
 from sklearn.feature_extraction.text import TfidfVectorizer
 import pickle as pckl
+
 warnings.filterwarnings(action='ignore')
 
+covid_paper_terms = pckl.load(open('../data/covid_paper_terms.pckl', 'rb'))
 
-def __tfidf(in_df, col, covid_paper_terms):
+
+def __tfidf(in_df, col):
     """
     Calculates TF-IDF on the input dataframe only considering the terms in col.
     :param in_df: input dataframe
     :param col: noun_phrases or entities
-    :param covid_paper_terms: covid_paper_terms
     :return: result dataframe and top terms
     """
     vectorizer = TfidfVectorizer(stop_words=covid_paper_terms, max_df=0.9, min_df=5)
@@ -82,16 +84,15 @@ def get_context_all(in_df, words, word_context_size=30, col='noun_phrases'):
     return context, tw_100
 
 
-def __clean_text(text, nps, covid_paper_terms):
+def __clean_text(text, nps):
     """
     Prepares the text for the embeddding.
     :param text: input text
     :param nps: noun phrases or entities in text (will be connected with _)
-    :param covid_paper_terms: covid_paper_terms
     :return: prepared text
     """
     sort_out_regex = re.compile('|'.join(covid_paper_terms))
-    text = re.sub(r'[^a-z ]', '', text.lower())
+    text = re.sub(r"[^a-z ]", '', text.lower())
     text = sort_out_regex.sub('', text)
     for np in nps:
         text = text.replace(np, '_'.join(np.lower().replace('the', '').split()))
@@ -153,8 +154,7 @@ def evaluate(top_terms, shortage_terms_covid):
     return precision, recall, fscore
 
 
-# noinspection PyPep8Naming
-def start_shortage_identification(df_tm, KG, path, shortage_terms_covid, shortage_terms_nocovid, covid_paper_terms):
+def start_shortage_identification(df_tm, KG, path, shortage_terms_covid, shortage_terms_nocovid):
     """
     Applies the shortage identification to the dataset once with and once without the KG.
     :param df_tm: dataframe from topic modeling
@@ -162,7 +162,6 @@ def start_shortage_identification(df_tm, KG, path, shortage_terms_covid, shortag
     :param path: path
     :param shortage_terms_covid: shortage terms
     :param shortage_terms_nocovid: shortage indicators
-    :param covid_paper_terms: list of terms to ignore
     :return: a list of precision, recall and fscore for each of the modes and methods
     """
 
@@ -171,9 +170,9 @@ def start_shortage_identification(df_tm, KG, path, shortage_terms_covid, shortag
     os.makedirs(path + '/shortage_identification/')
 
     rel_terms_in_kg = list(set(KG.s.to_list() + KG.o.to_list()))
-    match_str_in_kg = ' '.join(rel_terms_in_kg).replace('_', ' ').replace('  ', ' ')
     entities = [ent.replace('_', ' ').replace('  ', ' ') for ent in rel_terms_in_kg]
-    df_tm['entities'] = df_tm['abstract_processed'].apply(lambda text: [ent for ent in entities for ent in text])
+    pattern = r'\W.*?({})\W.*?'.format('|'.join(entities))
+    df_tm['entities'] = df_tm['abstract_processed'].apply(lambda text: re.findall(pattern, text, flags=re.IGNORECASE))
 
     result = list()
     for mode in ['noun_phrases', 'entities']:

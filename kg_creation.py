@@ -28,23 +28,7 @@ nltk.download('wordnet')
 nltk.download('brown')
 wordnet_lemmatizer = WordNetLemmatizer()
 
-# read data
-path = ''
-if not os.path.exists(path):
-    os.makedirs(path)
-os.makedirs(path + '/kgs')
-os.environ["CORENLP_HOME"] = path + '/corenlp'
-
-df_tm = pd.read_pickle(path + '/data/df_tm.pckl')
-
-df_cov = pd.read_csv(path + '/data/shortage_terms.csv', delimiter=';')
-shortage_terms_nocovid = df_cov[df_cov['type'].isin(
-    ['product_syn', 'procure_syn', 'shortage_syn', 'stock_syn', 'increase_syn', 'startegy_syn', 'require_syn'])][
-    'name'].to_list()
-shortage_terms_covid = df_cov[~df_cov['name'].isin(shortage_terms_nocovid)]['name'].to_list()
-shortage_terms_all = df_cov['name'].to_list()
-
-covid_paper_terms = pckl.load(open(path + 'data/covid_paper_terms.pckl', 'rb'))
+covid_paper_terms = pckl.load(open('../data/covid_paper_terms.pckl', 'rb'))
 
 
 def clean_kg(KG):
@@ -80,7 +64,7 @@ def clean_kg(KG):
     return KG
 
 
-def evaluate_kg(KG, rel_terms=shortage_terms_all):
+def evaluate_kg(KG, rel_terms):
     """
     Evaluates the KG based on the entities that contain a shortage term using prescision and recall.
     :param KG: the knowledge graph
@@ -119,9 +103,10 @@ def __get_dbpedia_triples_2016(url):
     return triples
 
 
-def entity_linking():
+def entity_linking(df_cov):
     """
-    Creates the initial KG from the list of shortage indicators by linking it to DBPedia from 2016 and extracting the triples.
+    Creates the initial KG from the list of shortage indicators by linking it to DBPedia from 2016 and extracting the
+    triples.
     :return: initial KG
     """
     df_no_cov = df_cov[df_cov['type'].isin(
@@ -134,7 +119,6 @@ def entity_linking():
     KG = pd.concat(links.apply(__get_dbpedia_triples_2016).to_list())
 
     KG = clean_kg(KG)
-    KG.to_pickle(path + 'kgs/initial_kg.pckl')
     return KG
 
 
@@ -160,8 +144,8 @@ def add_synonyms(KG):
     KG = KG.append(pd.concat(KG['s'].apply(__find_synonyms).to_list())).drop_duplicates()
     KG = KG.append(pd.concat(KG['o'].apply(__find_synonyms).to_list())).drop_duplicates()
     KG = clean_kg(KG)
-    KG.to_pickle(path + 'kgs/initial_kg.pckl')
     return KG
+
 
 ###################################################################
 ##Entity Typing
@@ -204,7 +188,7 @@ def __most_occurring(group):
         return None
 
 
-def create_entity_type_dict():
+def create_entity_type_dict(df_tm):
     """
     Creates the look-up table of terms (s) and types (o) with only one type per term. The
     :return: the look up table in triple form with the relation entity_type
@@ -219,7 +203,7 @@ def create_entity_type_dict():
 
     entity_types['p'] = 'entity_type'
     entity_types = clean_kg(entity_types)
-    entity_types[['s', 'p', 'o']].to_pickle(path + 'entity_types.pckl')
+    entity_types[['s', 'p', 'o']].to_pickle('../data/entity_types.pckl')
     return entity_types
 
 
@@ -231,11 +215,10 @@ def add_entity_types(KG, entity_types=None):
     :return: KG enhanced by entity types
     """
     if not entity_types:
-        entity_types = pd.read_pickle(path + 'entity_types.pckl')
+        entity_types = pd.read_pickle('../data/entity_types.pckl')
     entity_types = entity_types[entity_types['s'].isin(KG['s'].unique()) | entity_types['s'].isin(KG['o'].unique())]
     KG = KG.append(entity_types)[['s', 'p', 'o']]
     KG = clean_kg(KG)
-    KG.to_pickle(path + 'kgs/kg_entity_typing.pckl')
     return KG
 
 
@@ -332,7 +315,7 @@ def __longest_head_tail(KG):
         ['s', 'p', 'o', 'sent']]
 
 
-def __split_to_sentences(in_kg):
+def __split_to_sentences(in_kg, df_tm):
     """
     Splits the dataframe into sentences and only keeps entries that contain a KG entity.
     :param in_kg: string of entities in the KG separated by a |
@@ -352,14 +335,15 @@ def __split_to_sentences(in_kg):
     return df_tm_sent
 
 
-def relation_extraction(KG):
+def relation_extraction(KG, df_tm):
     """
     Applies relation extraction to the data and adds only triples where at least one entity is already part of the KG.
+    :param df_tm: dataframe
     :param KG: knowledge graph
     :return: KG with triples from text
     """
     in_kg = '|'.join(set(KG['s'].to_list() + KG['o'].to_list())).replace('_', ' ')
-    df_tm_sent = __split_to_sentences(in_kg)
+    df_tm_sent = __split_to_sentences(in_kg, df_tm)
     rel_df_sent = __create_triples(df_tm_sent)
     rel_df_sent = __longest_head_tail(rel_df_sent)
 
@@ -374,7 +358,6 @@ def relation_extraction(KG):
 
     KG = KG.append(triples_to_add).drop_duplicates()
     KG = clean_kg(KG)
-    KG.to_pickle(path + 'kgs/kg_re.pckl')
     return KG
 
 
@@ -421,7 +404,6 @@ def create_superclasses(KG):
     to_add_s = clean_kg(to_add_s)
     KG = KG.append(to_add_s)
     KG = clean_kg(KG)
-    KG.to_pickle(path + 'kgs/kg_subclass.pckl')
     return KG
 
 
@@ -440,7 +422,7 @@ def __create_embedding(KG):
     X_train, X_test = train_test_split_no_unseen(X, test_size=int(X.shape[0] * 0.3), allow_duplication=True)
     model = ComplEx()
     model.fit(X_train)
-    save_model(model, path + 'kg_embedding.pckl')
+    save_model(model, '../KGs/kg_embedding.pckl')
     return X, model
 
 
@@ -459,7 +441,6 @@ def remove_duplicates(KG):
 
     KG = pd.concat([KG, to_remove]).drop_duplicates(keep=False)
     KG = clean_kg(KG)
-    KG.to_pickle(path + 'kgs/kg_duplicates.pckl')
     return KG
 
 
@@ -489,33 +470,37 @@ def remove_duplicates_dedupe(KG):
     duplicates = duplicates[duplicates.index.isin(longer_dup)]
     KG = keep[['s', 'p', 'o']].append(duplicates)[['s', 'p', 'o']]
     KG = clean_kg(KG.dropna())
-    KG.to_pickle(path + 'kgs/kg_duplicates_dedupe.pckl')
     return KG
 
 
-def create_kg():
+def create_kg(path, df_tm, shortage_terms_all, df_cov):
+    """
+    Creates the KG.
+    :return: KG
+    """
     evaluation = list()
-    KG = entity_linking()
-    evaluation.append([evaluate_kg(KG)])
+
+    KG = entity_linking(df_cov)
+    evaluation.append([evaluate_kg(KG, shortage_terms_all)])
 
     KG = add_synonyms(KG)
-    evaluation.append([evaluate_kg(KG)])
+    evaluation.append([evaluate_kg(KG, shortage_terms_all)])
 
-    entity_types = create_entity_type_dict()
+    entity_types = create_entity_type_dict(df_tm)
     KG = add_entity_types(KG, entity_types)
-    evaluation.append([evaluate_kg(KG)])
+    evaluation.append([evaluate_kg(KG, shortage_terms_all)])
 
-    KG = relation_extraction(KG)
-    evaluation.append([evaluate_kg(KG)])
+    KG = relation_extraction(KG, df_tm)
+    evaluation.append([evaluate_kg(KG, shortage_terms_all)])
 
-    KG = relation_extraction(KG)
-    evaluation.append([evaluate_kg(KG)])
+    KG = relation_extraction(KG, df_tm)
+    evaluation.append([evaluate_kg(KG, shortage_terms_all)])
 
     KG = create_superclasses(KG)
-    evaluation.append([evaluate_kg(KG)])
+    evaluation.append([evaluate_kg(KG, shortage_terms_all)])
 
     KG = add_entity_types(KG, entity_types)
-    evaluation.append([evaluate_kg(KG)])
+    evaluation.append([evaluate_kg(KG, shortage_terms_all)])
 
     KG.to_pickle(path + 'kgs/KG_final.pckl')
     return KG, evaluation
