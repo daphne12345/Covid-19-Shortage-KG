@@ -1,7 +1,7 @@
 # Covid-19-Shortage-KG
 
 1. Download the CORD-19 data from kaggle (only the file "metadata.csv"): https://www.kaggle.com/datasets/allen-institute-for-ai/CORD-19-research-challenge?select=metadata.csv
-2. Place file in folder "data".
+2. Place the metadata file in folder "data".
 3. Install requirements:
 ```
 pip -r requirements.txt
@@ -17,7 +17,7 @@ python data_preparation.py
 ```
 6. To train the hyperparameters run:
 ```
-python data_preparation.py
+python tm_hyperparameter_tuning.py
 ```
 7. Check output for hyperparameters, if hyperparameter tuning was not performed, the default parameters can be used.
 8. Run topic modeling with the hyperparameters to create the final topic model and reduce the dataset.
