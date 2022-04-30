@@ -19,11 +19,15 @@ python data_preparation.py
 ```
 python data_preparation.py
 ```
-7. Check output for optimal hyperparameters, if hyperparameter tuning was not performed, use default parameters:
-8. Run topic modeling to create the final topic model with the optimal hyperparameters and reduce the dataset
+7. Check output for hyperparameters, if hyperparameter tuning was not performed, the default parameters can be used.
+8. Run topic modeling with the hyperparameters to create the final topic model and reduce the dataset.
 ```
 python topic_modeling.py --alpha 0.03 --beta 0.03 --k 3 --seed_confidence 0.98 --shortage_words = ['goods', 'capacity', 'shortage', 'stock', 'peak', 'deficiency',
                   'market', 'demand', 'inventory', 'reduction', 'resource', 'lack',
                   'manufacturing', 'deficit', 'scarcity', 'product', 'logistics',
                   'unavailability', 'supply chain', 'supply']
 ``` 
+9. To create the Knowledge Graph, run:
+```
+python kg_creation.py
+```
