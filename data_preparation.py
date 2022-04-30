@@ -8,8 +8,6 @@ import nltk
 from nltk.tokenize import sent_tokenize
 import numpy as np
 from langdetect import detect
-import os
-os.system('python -m spacy download en_core_web_sm') # restart after running this line
 nltk.download('stopwords')
 nltk.download('punkt')
 nltk.download('averaged_perceptron_tagger')
@@ -19,8 +17,7 @@ nltk.download('wordnet')
 
 # 1. Read metadata (can be downloaded
 # from https://www.kaggle.com/datasets/allen-institute-for-ai/CORD-19-research-challenge?select=metadata.csv).
-path = ''
-df = pd.read_csv(path + 'data/metadata.csv')
+df = pd.read_csv('data/metadata.csv')
 df = df[['cord_uid', 'title', 'abstract', 'publish_time']].drop_duplicates()
 
 # 2. convert date to month & year
@@ -49,7 +46,7 @@ df['abstract_processed'] = df['abstract'].apply(lambda text: re.sub(r'[^\w.!? ]'
 nlp = spacy.load("en_core_web_sm")
 spacy.prefer_gpu()
 articles = ['the', 'a', 'an', 'this']
-covid_paper_terms = pckl.load(open(path + 'data/covid_paper_terms.pckl', 'rb'))
+covid_paper_terms = pckl.load(open('data/covid_paper_terms.pckl', 'rb'))
 
 
 def extract_noun_phrases(text):
@@ -76,4 +73,4 @@ df[['np_sent', 'noun_phrases']] = df['abstract_processed'].apply(extract_noun_ph
 
 # 6. delete irrelevant columns and save preprocessed data
 df = df[['cord_uid', 'has_month', 'abstract_processed', 'real_month', 'noun_phrases', 'np_sent']]
-df.to_pickle(path + 'data/df_preprocessed.pckl')
+df.to_pickle('data/df_preprocessed.pckl')

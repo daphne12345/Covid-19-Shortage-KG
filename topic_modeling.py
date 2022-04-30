@@ -7,25 +7,32 @@ from sklearn.feature_extraction.text import CountVectorizer
 from tmtoolkit.topicmod.evaluate import metric_coherence_gensim
 from lda import guidedlda as glda
 import logging
+import argparse
 
 logging.basicConfig(level=logging.WARNING)
 
 # hyperparameters
-k = 3
-alpha = 0.03
-beta = 0.03
-seed_confidence = 0.98
-shortage_words = ['goods', 'capacity', 'shortage', 'stock', 'peak', 'deficiency',
+parser = argparse.ArgumentParser("simple_example")
+parser.add_argument("k", help="Number of topics", type=int, default=3)
+parser.add_argument("alpha", help="Alpha", type=int, default=0.03)
+parser.add_argument("beta", help="beta", type=int, default=0.03)
+parser.add_argument("seed_confidence", help="seed confidence", type=int, default=0.98)
+parser.add_argument("seed_terms", help="Seed for the topic to keep", type=int, default=['goods', 'capacity', 'shortage', 'stock', 'peak', 'deficiency',
                   'market', 'demand', 'inventory', 'reduction', 'resource', 'lack',
                   'manufacturing', 'deficit', 'scarcity', 'product', 'logistics',
-                  'unavailability', 'supply chain', 'supply']
+                  'unavailability', 'supply chain', 'supply'])
+args = parser.parse_args()
+k = args['k']
+alpha = args['alpha']
+beta = args['beta']
+seed_confidence = args['seed_confidence']
+shortage_words = args['seed_terms']
 
 # read data
-path = ''
-df = pd.read_pickle(path + '/data/df_preprocessed.pckl')
+df = pd.read_pickle('data/df_preprocessed.pckl')
 
 # read shortage lists
-df_cov = pd.read_csv(path + '/data/shortage_terms.csv', delimiter=';')
+df_cov = pd.read_csv('data/shortage_terms.csv', delimiter=';')
 shortage_terms_nocovid = df_cov[df_cov['type'].isin(
     ['product_syn', 'procure_syn', 'shortage_syn', 'stock_syn', 'increase_syn', 'startegy_syn', 'require_syn'])][
     'name'].to_list()
@@ -77,6 +84,6 @@ print('recall:', recall)
 print('fscore:', fscore)
 
 # save dataset, model and evaluation measures
-pckl.dump(df_tm, open(path + '/data/df_reduced_by_tm.pckl', 'wb'))
+df_tm.to_pickle('data/df_reduced_by_tm.pckl')
 model_dict = {'model': lda, 'coherence': coherence, 'recall': recall, 'precision': precision, 'fscore': fscore}
-pckl.dump(model_dict, open(path + 'lda_model.pckl', 'wb'))
+pckl.dump(model_dict, open('models/lda_model.pckl', 'wb'))

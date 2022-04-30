@@ -1,36 +1,41 @@
 # -*- coding: utf-8 -*-
 
 # This code was used to tune the hyperparameters of the topic model.
-
 import datetime
 import numpy as np
 import os
 import pandas as pd
 import pickle as pckl
-from hyperactive import (
-    Hyperactive,
-    RandomRestartHillClimbingOptimizer,
-    RandomSearchOptimizer
-)
+from hyperactive import Hyperactive
+from hyperactive.optimizers import RandomRestartHillClimbingOptimizer
 from sklearn.feature_extraction.text import CountVectorizer
 from tmtoolkit.topicmod.evaluate import metric_coherence_gensim
 import random
+import lda
+os.system('git clone https://github.com/dex314/GuidedLDA_WorkAround.git')
+
+import shutil
+lda_path = os.path.abspath(lda.__file__)
+lda_path = '/'.join(lda_path.split('/')[:-1]) if '/' in lda_path else '/'.join(lda_path.split('\\')[:-1])
+print(lda_path)
+
+try:
+  shutil.move("GuidedLDA_WorkAround/glda_datasets.py", lda_path)
+  shutil.move("GuidedLDA_WorkAround/guidedlda.py", lda_path)
+  shutil.move("GuidedLDA_WorkAround/guidedutils.py", lda_path)
+except:
+  pass
 from lda import guidedlda as glda
 import logging
 
 logging.basicConfig(level=logging.WARNING)
 
-path = ''
-if not os.path.exists(path):
-    os.makedirs(path)
-    os.makedirs(path + 'models')
-    os.makedirs(path + 'model_dicts')
-
 # read data
-df = pd.read_pickle(path + '/data/df_preprocessed.pckl')
+df = pd.read_pickle('data/df_preprocessed.pckl')
+
 
 # read shortage lists
-df_cov = pd.read_csv(path + '/data/shortage_terms.csv', delimiter=';')
+df_cov = pd.read_csv('data/shortage_terms.csv', delimiter=';')
 shortage_terms_nocovid = df_cov[df_cov['type'].isin(
     ['product_syn', 'procure_syn', 'shortage_syn', 'stock_syn', 'increase_syn', 'startegy_syn', 'require_syn'])][
     'name'].to_list()
@@ -57,7 +62,8 @@ def optimize(optimizer):
     :param optimizer: an instance of the hyperactive optimizer class
     """
     # take a sample and format it for the lda model
-    sample = df.sample(10000)
+    # sample = df.sample(10000) #TODO
+    sample = df
     vectorizer = CountVectorizer(max_df=0.95, min_df=2, max_features=10000, tokenizer=lambda doc: doc,
                                  preprocessor=lambda doc: [x.lower() for x in doc])
     words_all = sample['noun_phrases']
@@ -104,12 +110,12 @@ def optimize(optimizer):
 
         # save the model and its hyperparamters
         name = datetime.datetime.now().strftime("%m_%d_%H_%M_%S") + '.pckl'
-        pckl.dump({'X': X, 'voc': vectorizer.vocabulary_, 'model': lda}, open(path + 'models/lda_' + name, 'wb'))
+        pckl.dump({'X': X, 'voc': vectorizer.vocabulary_, 'model': lda}, open('models/lda_' + name, 'wb'))
         model_dict = {'name': name, 'coherence': coherence, 'max_overlap': overlap_nocov,
                       'k': opt['k'], 'alpha': opt['alpha'],
                       'beta': opt['beta'], 'seed_confidence': opt['seed_confidence'], 'seed_list': shortage_words,
                       'recall': recall, 'precision': precision, 'fscore': fscore }
-        pckl.dump(model_dict, open(path + 'model_dicts/model_dict_' + name, 'wb'))
+        pckl.dump(model_dict, open('models/model_dict_' + name, 'wb'))
         global res
         res = res.append(model_dict, ignore_index=True)
 
@@ -130,53 +136,54 @@ def optimize(optimizer):
     hyper.add_search(model, search_space, optimizer=optimizer, n_iter=20, max_score=1)
     hyper.run()
 
+if __name__=="__main__":
+    # overall result dataframe to easily compare the models
+    res = pd.DataFrame(
+        columns=['name', 'coherence', 'max_overlap', 'k', 'alpha', 'beta', 'seed_confidence', 'seed_list',
+                 'recall', 'precision', 'fscore'])
 
-# overall result dataframe to easily compare the models
-res = pd.DataFrame(
-    columns=['name', 'coherence', 'max_overlap', 'k', 'alpha', 'beta', 'seed_confidence', 'seed_list',
-             'recall', 'precision', 'fscore'])
+    # Run the optimization 5 times, to avoid local optima (total of 100 models)
 
-# Run the optimization 5 times, to avoid local optima (total of 100 models)
-for i in range(5):
-    optimizer = RandomRestartHillClimbingOptimizer(n_neighbours=8)
-    optimize(optimizer)
-    res.to_pickle(path + 'result_' + str(i) + '.pckl')
-
-
-#####################################################
-# Select the best hyperparamters based on the 100 models
+    for i in range(5):
+        optimizer = RandomRestartHillClimbingOptimizer(n_neighbours=8)
+        optimize(optimizer)
+        res.to_pickle('tm_tuning/tm_tuning_result_' + str(i) + '.pckl')
 
 
-# convert the parameters to float
-res['n_seed'] = res['seed_list'].apply(len)
-res['k'] = res['k'].astype(float)
-res['max_overlap'] = res['max_overlap'].astype(float)
-res['precision'] = res['precision'].astype(float)
-res['recall'] = res['recall'].astype(float)
-res['fscore'] = res['fscore'].astype(float)
+    #####################################################
+    # Select the best hyperparamters based on the 100 models
 
-# Calculate the average of the fscore and coherence
-res['(Coherence+fscore)/2'] = (res['coherence'] + res['fscore'])/2
 
-# create a dataframe of the 10 best performing models
-res_good = res.sort_values(asecnding=True, by='(Coherence+fscore)/2').head(10) # select 10 best models
-res_good = res_good[res_good['seed_confidence']>0.9] # only keep models with a high seed confidence
+    # convert the parameters to float
+    res['n_seed'] = res['seed_list'].apply(len)
+    res['k'] = res['k'].astype(float)
+    res['max_overlap'] = res['max_overlap'].astype(float)
+    res['precision'] = res['precision'].astype(float)
+    res['recall'] = res['recall'].astype(float)
+    res['fscore'] = res['fscore'].astype(float)
 
-k = round(res_good['k'].mean(),2)
-print('k:', k)
+    # Calculate the average of the fscore and coherence
+    res['(Coherence+fscore)/2'] = (res['coherence'] + res['fscore'])/2
 
-alpha = round(res_good['alpha'].mean(),2)
-print('alpha:', alpha)
+    # create a dataframe of the 10 best performing models
+    res_good = res.sort_values(ascending=True, by='(Coherence+fscore)/2').head(10) # select 10 best models
+    res_good = res_good[res_good['seed_confidence']>0.9] # only keep models with a high seed confidence
 
-beta = round(res_good['beta'].mean(),2)
-print('beta:', beta)
+    k = round(res_good['k'].mean(),2)
+    print('k:', k)
 
-n_seed_terms = int(res_good['n_seed_terms'].mean())
-print('Number of seed terms:', n_seed_terms)
+    alpha = round(res_good['alpha'].mean(),2)
+    print('alpha:', alpha)
 
-# select the n_seed_terms most occurring seed terms within the best models
-best_terms = res_good['seed_list'].explode().value_counts().head(n_seed_terms).index
-print('Seed terms:', best_terms)
+    beta = round(res_good['beta'].mean(),2)
+    print('beta:', beta)
 
-seed_confidence = int(round(res_good['seed_confidence'].mean(),2))
-print('Seed confidence:', seed_confidence)
+    n_seed_terms = int(res_good['n_seed_terms'].mean())
+    print('Number of seed terms:', n_seed_terms)
+
+    # select the n_seed_terms most occurring seed terms within the best models
+    best_terms = res_good['seed_list'].explode().value_counts().head(n_seed_terms).index
+    print('Seed terms:', best_terms)
+
+    seed_confidence = int(round(res_good['seed_confidence'].mean(),2))
+    print('Seed confidence:', seed_confidence)

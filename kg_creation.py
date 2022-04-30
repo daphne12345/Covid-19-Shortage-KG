@@ -8,7 +8,8 @@ import os
 import warnings
 import re
 import nltk
-from nltk.tokenize import word_tokenize, sent_tokenize, pos_tag
+from nltk.tokenize import word_tokenize, sent_tokenize
+from nltk import pos_tag
 from nltk.corpus import wordnet as wn
 from nltk.stem import WordNetLemmatizer
 from transformers import LukeTokenizer, LukeForEntityClassification
@@ -28,7 +29,8 @@ nltk.download('wordnet')
 nltk.download('brown')
 wordnet_lemmatizer = WordNetLemmatizer()
 
-covid_paper_terms = pckl.load(open('../data/covid_paper_terms.pckl', 'rb'))
+covid_paper_terms = pckl.load(open('data/covid_paper_terms.pckl', 'rb'))
+os.environ["CORENLP_HOME"] = 'corenlp/'
 
 
 def clean_kg(KG):
@@ -79,7 +81,6 @@ def evaluate_kg(KG, rel_terms):
     precision = len(selected_entities) / len(entities)  # how many entities are relevant?
     print('precision:', str(precision), 'recall:', str(recall), 'selected terms:', len(selected_terms),
           'selected KG entities:', len(selected_entities))
-    return precision, recall, len(selected_terms), len(selected_entities)
 
 
 ################################################################################
@@ -203,7 +204,7 @@ def create_entity_type_dict(df_tm):
 
     entity_types['p'] = 'entity_type'
     entity_types = clean_kg(entity_types)
-    entity_types[['s', 'p', 'o']].to_pickle('../data/entity_types.pckl')
+    entity_types[['s', 'p', 'o']].to_pickle('data/entity_types.pckl')
     return entity_types
 
 
@@ -215,7 +216,7 @@ def add_entity_types(KG, entity_types=None):
     :return: KG enhanced by entity types
     """
     if not entity_types:
-        entity_types = pd.read_pickle('../data/entity_types.pckl')
+        entity_types = pd.read_pickle('data/entity_types.pckl')
     entity_types = entity_types[entity_types['s'].isin(KG['s'].unique()) | entity_types['s'].isin(KG['o'].unique())]
     KG = KG.append(entity_types)[['s', 'p', 'o']]
     KG = clean_kg(KG)
@@ -422,7 +423,7 @@ def __create_embedding(KG):
     X_train, X_test = train_test_split_no_unseen(X, test_size=int(X.shape[0] * 0.3), allow_duplication=True)
     model = ComplEx()
     model.fit(X_train)
-    save_model(model, '../KGs/kg_embedding.pckl')
+    save_model(model, 'KGs/kg_embedding.pckl')
     return X, model
 
 
@@ -473,34 +474,48 @@ def remove_duplicates_dedupe(KG):
     return KG
 
 
-def create_kg(path, df_tm, shortage_terms_all, df_cov):
+def create_kg(df_tm, shortage_terms_all, df_cov):
     """
     Creates the KG.
     :return: KG
     """
-    evaluation = list()
-
     KG = entity_linking(df_cov)
-    evaluation.append([evaluate_kg(KG, shortage_terms_all)])
+    print('Entity Linking')
+    evaluate_kg(KG, shortage_terms_all)
 
     KG = add_synonyms(KG)
-    evaluation.append([evaluate_kg(KG, shortage_terms_all)])
+    print('Synonyms')
+    evaluate_kg(KG, shortage_terms_all)
 
     entity_types = create_entity_type_dict(df_tm)
     KG = add_entity_types(KG, entity_types)
-    evaluation.append([evaluate_kg(KG, shortage_terms_all)])
+    print('Entity Types')
+    evaluate_kg(KG, shortage_terms_all)
 
     KG = relation_extraction(KG, df_tm)
-    evaluation.append([evaluate_kg(KG, shortage_terms_all)])
+    print('Relation Extraction')
+    evaluate_kg(KG, shortage_terms_all)
 
     KG = relation_extraction(KG, df_tm)
-    evaluation.append([evaluate_kg(KG, shortage_terms_all)])
+    print('2nd Relation Extraction')
+    evaluate_kg(KG, shortage_terms_all)
 
     KG = create_superclasses(KG)
-    evaluation.append([evaluate_kg(KG, shortage_terms_all)])
+    print('Superclasses')
+    evaluate_kg(KG, shortage_terms_all)
 
     KG = add_entity_types(KG, entity_types)
-    evaluation.append([evaluate_kg(KG, shortage_terms_all)])
+    print('2nd Entity Types (Final KG)')
+    evaluate_kg(KG, shortage_terms_all)
 
-    KG.to_pickle(path + 'kgs/KG_final.pckl')
-    return KG, evaluation
+    KG.to_pickle('kgs/KG_final.pckl')
+
+
+#######################################
+# Create Knowledge Graph
+if __name__ == "__main__":
+    df_tm = pd.read_pickle('data/df_reduced_by_tm.pckl')
+    df_cov = pd.read_csv('data/shortage_terms.csv', delimiter=';')
+    shortage_terms_all = df_cov['name'].to_list()
+
+    create_kg(df_tm, shortage_terms_all, df_cov)
