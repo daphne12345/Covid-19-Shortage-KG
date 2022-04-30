@@ -7,15 +7,16 @@
 pip -r requirements.txt
 ```
 (if you run into issues installing lda, download  "Microsoft C++ Build Tools": https://visualstudio.microsoft.com/visual-cpp-build-tools/)
+
 4. Download spacy language model:
 ```
 python -m spacy download en_core_web_sm
 ```
-5. To prepare the data run:
+5. To prepare the data, run:
 ```
 python data_preparation.py
 ```
-6. To train the hyperparameters run:
+6. To train the hyperparameters, run:
 ```
 python tm_hyperparameter_tuning.py
 ```
@@ -30,4 +31,8 @@ python topic_modeling.py --alpha 0.03 --beta 0.03 --k 3 --seed_confidence 0.98 -
 9. To create the Knowledge Graph, run:
 ```
 python kg_creation.py
+```
+10. To perform shortage identitfaction, run:
+```
+python shortage_identification.py
 ```
