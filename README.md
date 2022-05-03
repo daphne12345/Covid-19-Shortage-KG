@@ -32,7 +32,7 @@ python topic_modeling.py --alpha 0.03 --beta 0.03 --k 3 --seed_confidence 0.98 -
 ```
 python kg_creation.py
 ```
-10. To perform shortage identitfaction, run:
+10. To perform shortage identification, run:
 ```
 python shortage_identification.py
 ```

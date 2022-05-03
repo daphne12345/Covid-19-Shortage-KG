@@ -50,6 +50,11 @@ covid_paper_terms = pckl.load(open('data/covid_paper_terms.pckl', 'rb'))
 
 
 def extract_noun_phrases(text):
+    """
+    Extracts the noun phrases from the input text and returns them per sentence and for the entire text.
+    :param text: text
+    :return: list of noun phrases per sentence and list of noun phrases for the entire text as Series
+    """
     nps_sents = list()
     nps_all = list()
     for sent in sent_tokenize(text):

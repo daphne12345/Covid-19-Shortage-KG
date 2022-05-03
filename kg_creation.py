@@ -4,7 +4,6 @@ import spacy
 from bs4 import BeautifulSoup
 import pandas as pd
 import pickle as pckl
-import os
 import warnings
 import re
 import nltk
@@ -14,23 +13,27 @@ from nltk.corpus import wordnet as wn
 from nltk.stem import WordNetLemmatizer
 from transformers import LukeTokenizer, LukeForEntityClassification
 from sklearn.utils.extmath import softmax
+import stanza
 from stanza.server import CoreNLPClient
-from ampligraph.latent_features import ComplEx, save_model, restore_model
+from ampligraph.latent_features import ComplEx, save_model
 from ampligraph.evaluation import train_test_split_no_unseen
 import requests
 from ampligraph.discovery import find_duplicates
 import numpy as np
 import pandas_dedupe
+import swifter
 
 spacy.prefer_gpu()
 warnings.filterwarnings('ignore')
 nltk.download('punkt')
 nltk.download('wordnet')
 nltk.download('brown')
+nltk.download('omw-1.4')
 wordnet_lemmatizer = WordNetLemmatizer()
 
 covid_paper_terms = pckl.load(open('data/covid_paper_terms.pckl', 'rb'))
-os.environ["CORENLP_HOME"] = 'corenlp/'
+
+stanza.install_corenlp()
 
 
 def clean_kg(KG):
@@ -99,25 +102,27 @@ def __get_dbpedia_triples_2016(url):
     triples = pd.read_html(str(soup),
                            encoding='utf-8')[0].rename(columns={'Property': 'p', 'Value': 'o'}).dropna()
     triples['s'] = url.split('/')[-1].lower()
-    triples['o'] = triples['o'].apply(lambda x: [str(e).split('/')[-1] for e in str(x).split(' ')] if '/' in x else x)
+    triples['o'] = triples['o'].swifter.apply(
+        lambda x: [str(e).split('/')[-1] for e in str(x).split(' ')] if '/' in x else x)
     triples = triples.explode(column='o').dropna().drop_duplicates()
     return triples
 
 
-def entity_linking(df_cov):
+def entity_linking(in_df):
     """
     Creates the initial KG from the list of shortage indicators by linking it to DBPedia from 2016 and extracting the
     triples.
+    :param in_df: dataframe of shortages and shortage terms
     :return: initial KG
     """
-    df_no_cov = df_cov[df_cov['type'].isin(
+    df_no_cov = in_df[in_df['type'].isin(
         ['product_syn', 'procure_syn', 'shortage_syn', 'stock_syn', 'increase_syn', 'startegy_syn', 'require_syn'])]
     df_no_cov['link_direct'] = df_no_cov['name'].apply(
         lambda word: 'http://dbpedia.org/resource/' + word.strip(' ').replace(' ', '_').capitalize())
     df_no_cov['link_direct'] = df_no_cov['link_direct'].apply(
         lambda link: link if requests.get(url=link).status_code == 200 else None)
     links = pd.Series(df_no_cov['link_direct'].dropna().explode().dropna().unique())
-    KG = pd.concat(links.apply(__get_dbpedia_triples_2016).to_list())
+    KG = pd.concat(links.swifter.apply(__get_dbpedia_triples_2016).to_list())
 
     KG = clean_kg(KG)
     return KG
@@ -138,7 +143,7 @@ def __find_synonyms(word):
 
 def add_synonyms(KG):
     """
-    Add sysnonyms to the KG.
+    Add synonyms to the KG.
     :param KG: knowledge graph
     :return: KG with synonyms
     """
@@ -189,18 +194,19 @@ def __most_occurring(group):
         return None
 
 
-def create_entity_type_dict(df_tm):
+def create_entity_type_dict(in_df):
     """
-    Creates the look-up table of terms (s) and types (o) with only one type per term. The
+    Creates the look-up table of terms (s) and types (o) with only one type per term.
+    :param in_df: reduced dataframe
     :return: the look up table in triple form with the relation entity_type
     """
-    df_tm['type_sent'] = df_tm[['abstract_processed', 'np_sent']].apply(
+    in_df['type_sent'] = in_df[['abstract_processed', 'np_sent']].swifter.apply(
         lambda row: [__entity_typing(sent, nps) for (sent, nps) in
                      zip(sent_tokenize(row['abstract_processed']), row['np_sent'])], axis=1)
-    entity_types = pd.DataFrame(df_tm['type_sent'].explode().explode().to_list()).rename(columns={0: 's', 1: 'o'})
+    entity_types = pd.DataFrame(in_df['type_sent'].explode().explode().to_list()).rename(columns={0: 's', 1: 'o'})
     entity_types = entity_types[entity_types['o'].notna()]
     entity_types = entity_types[entity_types['s'].apply(len) > 2]
-    entity_types = entity_types.groupby('s').apply(__most_occurring).dropna().reset_index()
+    entity_types = entity_types.groupby('s').swifter.apply(__most_occurring).dropna().reset_index()
 
     entity_types['p'] = 'entity_type'
     entity_types = clean_kg(entity_types)
@@ -293,8 +299,8 @@ def __create_triples(in_df, max_entailments=600):
     for small_sample in sam_list:
         with CoreNLPClient(annotators=['openie'], memory='16G', endpoint='http://localhost:9002', be_quiet=True,
                            use_gpu=True, properties={'openie.max_entailments_per_clause': max_entailments}) as client:
-            small_sample['annotated'] = small_sample['abstract_processed'].apply(client.annotate)
-            rel_df = rel_df.append(pd.concat(small_sample.apply(
+            small_sample['annotated'] = small_sample['abstract_processed'].swifter.apply(client.annotate)
+            rel_df = rel_df.append(pd.concat(small_sample.swifter.apply(
                 lambda row: __correct_annotation(row['abstract_processed'], row['annotated'], row['np_sent']),
                 axis=1).to_list()))
     return rel_df
@@ -316,14 +322,15 @@ def __longest_head_tail(KG):
         ['s', 'p', 'o', 'sent']]
 
 
-def __split_to_sentences(in_kg, df_tm):
+def __split_to_sentences(in_kg, in_df):
     """
     Splits the dataframe into sentences and only keeps entries that contain a KG entity.
     :param in_kg: string of entities in the KG separated by a |
+    :param in_df: reduced dataframe
     :return: the dataframe in sentence format containing only sentences that contain a KG entity
     """
-    df_tm_sent = df_tm[df_tm['abstract_processed'].str.lower().str.contains(in_kg)]
-    df_tm_sent['sent'] = df_tm_sent['abstract_processed'].apply(sent_tokenize)
+    df_tm_sent = in_df[in_df['abstract_processed'].str.lower().str.contains(in_kg)]
+    df_tm_sent['sent'] = df_tm_sent['abstract_processed'].swifter.apply(sent_tokenize)
     df_tm_sent['both'] = df_tm_sent.apply(lambda row: list(zip(row['sent'], row['np_sent'])), axis=1)
     df_tm_sent = df_tm_sent.drop(columns=['abstract_processed', 'noun_phrases', 'np_sent', 'sent'])
     df_tm_sent = df_tm_sent.explode(column='both')
@@ -336,15 +343,15 @@ def __split_to_sentences(in_kg, df_tm):
     return df_tm_sent
 
 
-def relation_extraction(KG, df_tm):
+def relation_extraction(KG, in_df):
     """
     Applies relation extraction to the data and adds only triples where at least one entity is already part of the KG.
-    :param df_tm: dataframe
+    :param in_df: reduced dataframe
     :param KG: knowledge graph
     :return: KG with triples from text
     """
     in_kg = '|'.join(set(KG['s'].to_list() + KG['o'].to_list())).replace('_', ' ')
-    df_tm_sent = __split_to_sentences(in_kg, df_tm)
+    df_tm_sent = __split_to_sentences(in_kg, in_df)
     rel_df_sent = __create_triples(df_tm_sent)
     rel_df_sent = __longest_head_tail(rel_df_sent)
 
@@ -366,7 +373,7 @@ def relation_extraction(KG, df_tm):
 # superclasses
 
 
-nlp = spacy.load("en")
+nlp = spacy.load("en_core_web_sm")
 
 
 def __get_root(entity):
@@ -390,7 +397,7 @@ def create_superclasses(KG):
     :return: knowledge graph with superclasses
     """
     s_o = KG['s'].append(KG['o']).drop_duplicates().reset_index()
-    s_o['root'] = s_o[0].apply(__get_root)
+    s_o['root'] = s_o[0].swifter.apply(__get_root)
     s_o = s_o.explode(column='root')
     s_o = s_o[s_o[0] != 'root']
 
@@ -474,11 +481,14 @@ def remove_duplicates_dedupe(KG):
     return KG
 
 
-def create_kg(df_tm, shortage_terms_all, df_cov):
+def create_kg(df_tm, df_cov):
     """
-    Creates the KG.
+     Creates the KG.
+    :param df_tm: reduced dataframe from topic modeling
+    :param df_cov: dataframe of shortage terms and shortage indicators
     :return: KG
     """
+    shortage_terms_all = df_cov['name'].to_list()
     KG = entity_linking(df_cov)
     print('Entity Linking')
     evaluate_kg(KG, shortage_terms_all)
@@ -516,6 +526,5 @@ def create_kg(df_tm, shortage_terms_all, df_cov):
 if __name__ == "__main__":
     df_tm = pd.read_pickle('data/df_reduced_by_tm.pckl')
     df_cov = pd.read_csv('data/shortage_terms.csv', delimiter=';')
-    shortage_terms_all = df_cov['name'].to_list()
 
-    create_kg(df_tm, shortage_terms_all, df_cov)
+    create_kg(df_tm, df_cov)

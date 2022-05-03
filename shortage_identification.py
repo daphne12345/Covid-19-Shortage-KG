@@ -6,7 +6,6 @@ from gensim.models import Word2Vec
 from textblob import TextBlob
 import re
 from nltk.stem import WordNetLemmatizer
-import os
 from sklearn.feature_extraction.text import TfidfVectorizer
 import pickle as pckl
 
@@ -86,7 +85,7 @@ def get_context_all(in_df, words, word_context_size=30, col='noun_phrases'):
 
 def __clean_text(text, nps):
     """
-    Prepares the text for the embeddding.
+    Prepares the text for the embedding.
     :param text: input text
     :param nps: noun phrases or entities in text (will be connected with _)
     :return: prepared text
@@ -118,9 +117,9 @@ def create_word_embedding(in_df, mode):
 def embedding_most_similar(in_terms, model_emb, covid_paper_terms):
     """
     Retrieves the 100 most similar terms per input terms and returns the 100 most frequent ones.
-    :param covid_paper_terms: list of stop words
     :param in_terms: list of input terms
     :param model_emb: word embedding
+    :param covid_paper_terms: list of stop words
     :return: 100 top terms
     """
     tw = list()
@@ -140,8 +139,8 @@ def embedding_most_similar(in_terms, model_emb, covid_paper_terms):
 def evaluate(top_terms, shortage_terms_covid):
     """
     Calculate precision, recall and fscore for the list of input terms and the list of shortage terms.
-    :param shortage_terms_covid: shortage_terms_covid
     :param top_terms: list of terms to evaluate
+    :param shortage_terms_covid: shortage_terms_covid
     :return: precision, recall, fscore
     """
     retrieved = list(set([w.replace('_', ' ') for w in top_terms]))
