@@ -6,33 +6,31 @@
 ```
 pip -r requirements.txt
 ```
-(if you run into issues installing lda, download  "Microsoft C++ Build Tools": https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-
-4. Download spacy language model:
+4. Install "Java" (https://java.com/de/download/manual.jsp) and "Microsoft C++ Build Tools" (https://visualstudio.microsoft.com/visual-cpp-build-tools/).
+5. Download spacy language model:
 ```
 python -m spacy download en_core_web_sm
 ```
-5. To prepare the data, run:
+6. To prepare the data, run:
 ```
 python data_preparation.py
 ```
-6. To train the hyperparameters, run:
+7. To train the hyperparameters, run:
 ```
 python tm_hyperparameter_tuning.py
 ```
-7. Check output for hyperparameters, if hyperparameter tuning was not performed, the default parameters can be used.
-8. Run topic modeling with the hyperparameters to create the final topic model and reduce the dataset.
+8. Check output for hyperparameters, if hyperparameter tuning was not performed, the default parameters can be used.
+9. Run topic modeling with the hyperparameters to create the final topic model and reduce the dataset.
 ```
 python topic_modeling.py --alpha 0.03 --beta 0.03 --k 3 --seed_confidence 0.98 --shortage_words = ['goods', 'capacity', 'shortage', 'stock', 'peak', 'deficiency',
                   'market', 'demand', 'inventory', 'reduction', 'resource', 'lack',
                   'manufacturing', 'deficit', 'scarcity', 'product', 'logistics',
                   'unavailability', 'supply chain', 'supply']
 ``` 
-9. To create the Knowledge Graph, run:
+10. To create the Knowledge Graph, run:
 ```
 python kg_creation.py
 ```
-10. To perform shortage identification, run:
+11. To perform shortage identification, run:
 ```
 python shortage_identification.py
-```
