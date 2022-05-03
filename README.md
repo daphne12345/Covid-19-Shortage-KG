@@ -1,8 +1,8 @@
 # Covid-19-Shortage-KG
 
 1. Download the CORD-19 data from kaggle (only the file "metadata.csv"): https://www.kaggle.com/datasets/allen-institute-for-ai/CORD-19-research-challenge?select=metadata.csv
-2. Create a virtual environment with Python 3.7
-3. Place the metadata file in folder "data".
+2. Place the metadata file in folder "data".
+3. Create a virtual environment with Python 3.7
 4. Install requirements:
 ```
 pip -r requirements.txt
