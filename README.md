@@ -23,10 +23,7 @@ python tm_hyperparameter_tuning.py
 9. Check output for hyperparameters, if hyperparameter tuning was not performed, the default parameters can be used.
 10. Run topic modeling with the hyperparameters to create the final topic model and reduce the dataset.
 ```
-python topic_modeling.py --alpha 0.03 --beta 0.03 --k 3 --seed_confidence 0.98 --shortage_words = ['goods', 'capacity', 'shortage', 'stock', 'peak', 'deficiency',
-                  'market', 'demand', 'inventory', 'reduction', 'resource', 'lack',
-                  'manufacturing', 'deficit', 'scarcity', 'product', 'logistics',
-                  'unavailability', 'supply chain', 'supply']
+python topic_modeling.py --alpha 0.03 --beta 0.03 --k 3 --seed_confidence 0.98 --shortage_words = ['goods', 'capacity', 'shortage', 'stock', 'peak', 'deficiency', 'market', 'demand', 'inventory', 'reduction', 'resource', 'lack', 'manufacturing', 'deficit', 'scarcity', 'product', 'logistics', 'unavailability', 'supply chain', 'supply']
 ``` 
 11. To create the Knowledge Graph, run:
 ```
