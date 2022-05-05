@@ -35,11 +35,8 @@ parser.add_argument("--k", help="Number of topics", type=int, default=3)
 parser.add_argument("--alpha", help="Alpha", type=float, default=0.03)
 parser.add_argument("--beta", help="beta", type=float, default=0.03)
 parser.add_argument("--seed_confidence", help="seed confidence", type=float, default=0.98)
-parser.add_argument("--seed_terms", help="Seed for the topic to keep", type=list,
-                    default=['goods', 'capacity', 'shortage', 'stock', 'peak', 'deficiency',
-                             'market', 'demand', 'inventory', 'reduction', 'resource', 'lack',
-                             'manufacturing', 'deficit', 'scarcity', 'product', 'logistics',
-                             'unavailability', 'supply chain', 'supply'])
+parser.add_argument("--seed_terms", help="Seed for the topic to keep", type=str,
+                    default="goods,capacity,shortage,stock,peak,deficiency,market,demand,inventory,reduction,resource,lack,manufacturing,deficit,scarcity,product,logistics,unavailability,supply chain,supply")
 
 
 def create_topic_model(df, shortage_words):
@@ -113,7 +110,7 @@ if __name__ == "__main__":
     alpha = args.get('alpha')
     beta = args.get('beta')
     seed_confidence = args.get('seed_confidence')
-    shortage_words = args.get('seed_terms')
+    shortage_words = args.get('seed_terms').split(',')
 
     # read data
     df = pd.read_pickle('data/df_preprocessed.pckl')

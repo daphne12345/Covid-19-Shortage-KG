@@ -188,7 +188,7 @@ def __most_occurring(group):
     :return: the majority type or None if the requirements were not met
     """
     vc = group['o'].value_counts()
-    if (vc[0] > vc[1:].sum()) & (vc[0] > 5):
+    if (vc[0] > vc[1:].sum()) & (vc[0] > 2):#TODO change to 5
         return vc.index[0]
     else:
         return None
@@ -203,11 +203,15 @@ def create_entity_type_dict(in_df):
     in_df['type_sent'] = in_df[['abstract_processed', 'np_sent']].swifter.apply(
         lambda row: [__entity_typing(sent, nps) for (sent, nps) in
                      zip(sent_tokenize(row['abstract_processed']), row['np_sent'])], axis=1)
-    entity_types = pd.DataFrame(in_df['type_sent'].explode().explode().to_list()).rename(columns={0: 's', 1: 'o'})
+    entity_types = pd.DataFrame(in_df['type_sent'].explode().explode().to_list())
+    entity_types = entity_types.dropna()
+    entity_types['s'] = entity_types[0].apply(lambda x: x[0])
+    entity_types['o'] = entity_types[0].apply(lambda x: x[1])
+    entity_types = entity_types.drop(columns=[0])
+
     entity_types = entity_types[entity_types['o'].notna()]
     entity_types = entity_types[entity_types['s'].apply(len) > 2]
-    entity_types = entity_types.groupby('s').swifter.apply(__most_occurring).dropna().reset_index()
-
+    entity_types = entity_types.groupby('s').apply(__most_occurring).dropna().reset_index()
     entity_types['p'] = 'entity_type'
     entity_types = clean_kg(entity_types)
     entity_types[['s', 'p', 'o']].to_pickle('data/entity_types.pckl')
@@ -221,7 +225,7 @@ def add_entity_types(KG, entity_types=None):
     :param entity_types: the look-up table of entity types (is read from file if None)
     :return: KG enhanced by entity types
     """
-    if not entity_types:
+    if entity_types is None:
         entity_types = pd.read_pickle('data/entity_types.pckl')
     entity_types = entity_types[entity_types['s'].isin(KG['s'].unique()) | entity_types['s'].isin(KG['o'].unique())]
     KG = KG.append(entity_types)[['s', 'p', 'o']]

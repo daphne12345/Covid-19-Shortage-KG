@@ -8,6 +8,7 @@ import nltk
 from nltk.tokenize import sent_tokenize
 import numpy as np
 from langdetect import detect
+import swifter
 nltk.download('stopwords')
 nltk.download('punkt')
 nltk.download('averaged_perceptron_tagger')
@@ -33,11 +34,11 @@ df = df[(df['real_month'] >= '2019-11') & (
 df = df[df['abstract'].notna()]  # drop articles without an abstract
 df = df[df['abstract'].apply(lambda text: len(text.split(' '))) > 50]  # drop articles with a very short abstract
 
-df['abstract_low'] = df['abstract'].apply(
+df['abstract_low'] = df['abstract'].swifter.apply(
     lambda text: re.sub(r'[^\w]', '', str(text).lower()))  # lowercase and remove special characters
 df = df.drop_duplicates(subset='abstract_low')  # drop articles with the same abstract
 
-df = df[df['abstract'].apply(lambda text: detect(text[:50]) == 'en')]  # drop non-english abstracts
+df = df[df['abstract'].swifter.apply(lambda text: detect(text[:50]) == 'en')]  # drop non-english abstracts
 
 # 4. Clean abstracts: lower case and remove special characters
 df['abstract_processed'] = df['abstract'].apply(lambda text: re.sub(r'[^\w.!? ]', '', text))
@@ -74,7 +75,7 @@ def extract_noun_phrases(text):
     return pd.Series({'np_sent': nps_sents, 'noun_phrases': nps_all})
 
 
-df[['np_sent', 'noun_phrases']] = df['abstract_processed'].apply(extract_noun_phrases)
+df[['np_sent', 'noun_phrases']] = df['abstract_processed'].swifter.apply(extract_noun_phrases)
 
 # 6. delete irrelevant columns and save preprocessed data
 df = df[['cord_uid', 'has_month', 'abstract_processed', 'real_month', 'noun_phrases', 'np_sent']]
