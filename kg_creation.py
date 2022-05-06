@@ -188,7 +188,7 @@ def __most_occurring(group):
     :return: the majority type or None if the requirements were not met
     """
     vc = group['o'].value_counts()
-    if (vc[0] > vc[1:].sum()) & (vc[0] > 2):#TODO change to 5
+    if (vc[0] > vc[1:].sum()) & (vc[0] > 5):
         return vc.index[0]
     else:
         return None

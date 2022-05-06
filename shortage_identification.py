@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 import pandas as pd
-import numpy as np
 import warnings
 from gensim.models import Word2Vec
+import numpy as np
 from textblob import TextBlob
 import re
 from nltk.stem import WordNetLemmatizer
 from sklearn.feature_extraction.text import TfidfVectorizer
 import pickle as pckl
+
 
 warnings.filterwarnings(action='ignore')
 
@@ -122,8 +123,6 @@ def embedding_most_similar(in_terms, model_emb, covid_paper_terms):
     :param covid_paper_terms: list of stop words
     :return: 100 top terms
     """
-    tw = list()
-
     terms = list()
     nocovid_terms = [t.replace(' ', '_') for t in in_terms]
     for word in nocovid_terms:
@@ -132,8 +131,7 @@ def embedding_most_similar(in_terms, model_emb, covid_paper_terms):
     word_freq = pd.Series(terms).value_counts().reset_index()
     indices = list(set(word_freq['index']) - set(nocovid_terms + covid_paper_terms))
     word_freq = word_freq[word_freq['index'].isin(indices)].dropna().drop_duplicates()
-    tw.append(word_freq.nlargest(100, 0)['index'].to_list())
-    return tw
+    return word_freq.nlargest(100, 0)['index'].to_list()
 
 
 def evaluate(top_terms, shortage_terms_covid):
@@ -146,7 +144,7 @@ def evaluate(top_terms, shortage_terms_covid):
     retrieved = list(set([w.replace('_', ' ') for w in top_terms]))
     relevant = [w for w in retrieved if any([t in w for t in shortage_terms_covid])]
 
-    precision = len(relevant) / len(retrieved)
+    precision = len(relevant) / len(retrieved) if len(retrieved) > 0 else 0
     recall = len(relevant) / len(list(set(relevant + shortage_terms_covid)))
     fscore = 2 * ((precision * recall) / (precision + recall)) if (precision + recall) > 0 else 0
     print('Precision', precision, 'Recall', recall, 'F-Score', fscore)
